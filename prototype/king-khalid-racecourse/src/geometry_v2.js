@@ -107,6 +107,27 @@ export function buildBlob(cx, cz, radius, y, material, rng) {
   return geo; // geometry only — beds get merged into few draw calls in props
 }
 
+// Flat filled polygon on the ground (infield arena wedge, aprons).
+export function buildPolygon(points, y, material) {
+  const shape = new THREE.Shape();
+  shape.moveTo(points[0][0], -points[0][1]);
+  for (let i = 1; i < points.length; i++) shape.lineTo(points[i][0], -points[i][1]);
+  shape.closePath();
+  const geo = new THREE.ShapeGeometry(shape);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position;
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    uv[i * 2] = pos.getX(i) / 200;
+    uv[i * 2 + 1] = pos.getZ(i) / 200;
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.position.y = y;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
 // Straight chute extension: starts tangent to the training track and runs
 // straight while the oval curves away (SE diagonal band in the reference).
 export function buildChute(y, material) {

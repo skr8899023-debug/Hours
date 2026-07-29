@@ -25,6 +25,23 @@ const IMG_CANDIDATES = [
   './reference/kkrc_aerial_reference.png',
 ];
 
+// Ground-footprint mapping for the committed photo (landscape OBLIQUE aerial,
+// 800x533: city/north at the top, facilities/west at the left). Flat-projected
+// onto the ground plane this can only be a best-fit around the oval — the
+// perspective foreshortening of an oblique shot cannot be removed by an
+// affine overlay, and the report must say so.
+//   image-top -> -Z (north), image-left -> -X (west)  => base rotation 0
+const PHOTO_MAPPING = {
+  baseRotationDeg: 0,
+  // Calibrated in edge-comparison mode against the model boundary lines:
+  // the oblique view compresses the vertical image axis severely, so the
+  // 800x533 frame covers a nearly square ground footprint around the oval.
+  metersWidth: 1290,
+  metersHeight: 1275,
+};
+// The schematic fallback still uses the original portrait digitization
+// (image-top -> -X, image-left -> +Z => base rotation +90).
+
 export async function createReferenceOverlay(scene) {
   const state = {
     enabled: false,
@@ -67,9 +84,11 @@ export async function createReferenceOverlay(scene) {
   group.add(plane);
 
   function fitPlane() {
-    // documented mapping: image-top -> model -X, image-left -> model +Z.
-    plane.scale.set(W * state.scale, H * state.scale, 1);
-    plane.rotation.z = Math.PI / 2 + (state.rotationDeg * Math.PI) / 180;
+    const wm = state.isPhoto ? PHOTO_MAPPING.metersWidth : W;
+    const hm = state.isPhoto ? PHOTO_MAPPING.metersHeight : H;
+    const base = state.isPhoto ? PHOTO_MAPPING.baseRotationDeg : 90;
+    plane.scale.set(wm * state.scale, hm * state.scale, 1);
+    plane.rotation.z = ((base + state.rotationDeg) * Math.PI) / 180;
     plane.position.set(state.offsetX, 1.5, state.offsetZ);
   }
 
@@ -113,6 +132,7 @@ export async function createReferenceOverlay(scene) {
     const img = tex.image;
     state.imageWidth = img?.naturalWidth ?? img?.width ?? 0;
     state.imageHeight = img?.naturalHeight ?? img?.height ?? 0;
+    fitPlane();
     updateSourceLabel();
   }
 
@@ -257,12 +277,18 @@ export async function createReferenceOverlay(scene) {
       image_filename: state.imageName,
       image_dimensions_px: [state.imageWidth, state.imageHeight],
       opacity: state.opacity,
-      meters_per_image_height: H * state.scale,
-      meters_per_image_width: W * state.scale,
+      meters_per_image_height: (state.isPhoto ? PHOTO_MAPPING.metersHeight : H) * state.scale,
+      meters_per_image_width: (state.isPhoto ? PHOTO_MAPPING.metersWidth : W) * state.scale,
       scale_multiplier: state.scale,
+      base_rotation_deg: state.isPhoto ? PHOTO_MAPPING.baseRotationDeg : 90,
       rotation_deg: state.rotationDeg,
       offset_meters: [state.offsetX, state.offsetZ],
-      orientation: 'image-top = -X, image-left = +Z',
+      orientation: state.isPhoto
+        ? 'oblique photo, flat best-fit: image-top = -Z (north), image-left = -X (west)'
+        : 'schematic: image-top = -X, image-left = +Z',
+      projection_note: state.isPhoto
+        ? 'oblique aerial flat-projected onto the ground plane — footprint best-fit only, perspective foreshortening not removed'
+        : undefined,
     };
     if (camera) {
       out.camera_position = camera.position.toArray();
@@ -340,6 +366,27 @@ export async function createReferenceOverlay(scene) {
 
   const gotPhoto = await tryLoadPhoto();
   if (!gotPhoto) applyTexture(schematicTexture(), { isPhoto: false, name: 'schematic (no photo loaded)' });
+
+  // restore saved calibration so every session (and the capture tool) starts
+  // from the committed alignment
+  try {
+    const saved = await (await fetch('../reference/reference_alignment.json')).json();
+    if (saved && typeof saved.scale_multiplier === 'number') {
+      state.scale = saved.scale_multiplier;
+      state.rotationDeg = saved.rotation_deg ?? 0;
+      state.offsetX = saved.offset_meters?.[0] ?? 0;
+      state.offsetZ = saved.offset_meters?.[1] ?? 0;
+      state.opacity = saved.opacity ?? state.opacity;
+      planeMat.opacity = state.opacity;
+      const setV = (id, v) => { const el = panel.querySelector(id); if (el) el.value = String(v); };
+      setV('#refSc', state.scale);
+      setV('#refRot', state.rotationDeg);
+      setV('#refOX', state.offsetX);
+      setV('#refOZ', state.offsetZ);
+      setV('#refOp', state.opacity);
+    }
+  } catch { /* no saved alignment yet */ }
+
   fitPlane();
   updateSourceLabel();
 

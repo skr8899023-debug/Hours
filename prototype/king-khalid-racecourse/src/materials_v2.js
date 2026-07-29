@@ -107,7 +107,7 @@ export function createMaterialsV2() {
   dirtTex.wrapT = THREE.ClampToEdgeWrapping; // v spans the band width exactly once
 
   const sandTex = groundTexture({
-    base: '#d2a878',
+    base: '#c08a5c',
     blotches: [
       { color: '#e0c194', count: 20, rMin: 0.08, rMax: 0.28, alpha: 0.09 },
       { color: '#bf9a6b', count: 20, rMin: 0.06, rMax: 0.2, alpha: 0.08 },
@@ -161,7 +161,9 @@ export function createMaterialsV2() {
     desert: new THREE.MeshStandardMaterial({ map: desertTex, roughness: 1 }),
     asphalt: new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.92 }),
     asphaltFlat: new THREE.MeshStandardMaterial({ color: 0x8b8987, roughness: 0.92 }),
-    verge: new THREE.MeshStandardMaterial({ color: 0xc4a97c, roughness: 1 }),
+    // V2.1: the verges between the rails read as the same clay family in the
+    // photo, not pale cream
+    verge: new THREE.MeshStandardMaterial({ color: 0xb98f63, roughness: 1 }),
     servicePath: new THREE.MeshStandardMaterial({ color: 0xcfc2a6, roughness: 0.95 }),
     path: new THREE.MeshStandardMaterial({ color: 0xd8cbab, roughness: 0.95 }),
     pathMinor: new THREE.MeshStandardMaterial({ color: 0xccbf9e, roughness: 0.95 }),

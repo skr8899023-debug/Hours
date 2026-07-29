@@ -1,17 +1,27 @@
 {
   "format": "kkrc-reference-alignment",
   "version": 2,
-  "photo_verified": false,
-  "status": "INITIAL — digitized mapping only. Regenerated automatically by tools/capture_v2_1.mjs once reference/kkrc_aerial_reference.jpg exists and loads in REFERENCE ALIGNMENT MODE.",
-  "image_filename": "kkrc_aerial_reference.jpg (NOT YET IN REPO)",
-  "image_dimensions_px": [0, 0],
+  "photo_verified": true,
+  "image_filename": "kkrc_aerial_reference.jpg",
+  "image_dimensions_px": [
+    800,
+    533
+  ],
   "opacity": 0.5,
-  "meters_per_image_height": 830,
-  "meters_per_image_width": 623,
-  "scale_multiplier": 1.0,
+  "meters_per_image_height": 1275,
+  "meters_per_image_width": 1290,
+  "scale_multiplier": 1,
+  "base_rotation_deg": 0,
   "rotation_deg": 0,
-  "offset_meters": [0, 0],
-  "orientation": "image-top = -X, image-left = +Z",
-  "camera_position": [0, 900, 0.01],
-  "orthographic_bounds": { "left": -500, "right": 500, "top": 281.25, "bottom": -281.25 }
+  "offset_meters": [
+    18,
+    -92
+  ],
+  "orientation": "oblique photo, flat best-fit: image-top = -Z (north), image-left = -X (west)",
+  "projection_note": "oblique aerial flat-projected onto the ground plane — footprint best-fit only, perspective foreshortening not removed",
+  "camera_position": [
+    -469.99999999999983,
+    250,
+    479.9999999999999
+  ]
 }

@@ -37,10 +37,13 @@ export const CONTROL_POINTS = [
   [-11.8, -182.2],
   [-79.8, -175.9],
   [-147.7, -169.6],
-  [-215.6, -163.0],
-  [-278.9, -139.0],
-  [-327.2, -91.6],
-  [-352.5, -28.7],
+  // NW quadrant nudged outward per the photographic overlay (V2.1): the
+  // photo's back-straight/west-turn junction bulges slightly north-west of
+  // the original egg construction.
+  [-217.5, -166.5],
+  [-283.5, -143.5],
+  [-332.5, -95.0],
+  [-359.0, -29.5],
   [-350.3, 39.0],
   [-321.2, 100.1],
   [-269.9, 144.4],
@@ -77,12 +80,16 @@ export const TRACK = {
   perimeterFenceOffset: -50,
   railHeight: 1.15,
   startLineS: 210,
-  finishLineS: 300,
+  // finish just after the west-turn exit, in front of the stands at the
+  // west end (photographic pass: the facilities cluster around the west
+  // apex, not the middle of the home straight)
+  finishLineS: 30,
 };
 
-// Chute / training extension leaving the south-east of the oval (the wide
-// diagonal sand band in the lower right of the oblique reference).
-export const CHUTE = { s: 470, offset: -26, length: 235, width: 16 };
+// Long training extension leaving the east end nearly parallel to the main
+// axis and exiting the venue (photographic pass: the band runs to the frame
+// edge in the reference, far longer than the first-guess diagonal chute).
+export const CHUTE = { s: 420, offset: -26, length: 430, width: 18 };
 
 // ---------------------------------------------------------------------------
 // Closed Catmull-Rom centerline with arc-length lookup
@@ -248,10 +255,10 @@ export function candidateObstacleAnchors() {
 export const CAMERA_ANCHORS = {
   referenceMatch: {
     type: 'perspective',
-    position: [480, 235, 640],
-    target: [-120, 0, -80],
-    fov: 52,
-    description: 'Matches the oblique aerial reference: from the south, grandstand side near, city skyline behind, chute lower right',
+    position: [30, 200, 620],
+    target: [30, 0, -80],
+    fov: 55,
+    description: 'Matches the oblique aerial photo: from the south at moderate height, west facilities left, city skyline behind, training extension exiting right',
   },
   topOrthographic: {
     type: 'orthographic',
@@ -269,17 +276,17 @@ export const CAMERA_ANCHORS = {
   },
   trackside: {
     type: 'perspective',
-    position: [150, 2.6, 212],
-    target: [-90, 1.8, 182],
+    position: [-140, 2.6, 186],
+    target: [90, 1.8, 196],
     fov: 55,
-    description: 'Eye level just outside the outer rail near the finish line, looking back down the home straight',
+    description: 'Eye level just outside the outer rail near the finish line (west end of the home straight), looking east down the straight',
   },
   grandstand: {
     type: 'perspective',
-    position: [55, 12, 236],
-    target: [175, 2, 165],
+    position: [-400, 13, -15],
+    target: [-140, 2, 45],
     fov: 50,
-    description: 'From the grandstand tiers toward the finish line and east turn',
+    description: 'From the west-apex stand tiers looking east across the track toward the infield',
   },
   integrationOverview: {
     type: 'perspective',
@@ -295,82 +302,94 @@ export const CAMERA_ANCHORS = {
 // visible element in the aerial reference; nothing decorative is invented.
 // ---------------------------------------------------------------------------
 
+// V2.1 photographic pass: the facilities cluster around the WEST APEX of the
+// oval (stand + paddocks + service blocks + barn rows), the south straight is
+// bare apart from the perimeter road and parking aprons, and a gate house
+// sits at the south-east corner.
 export const BUILDING_ZONES = {
-  // long grandstand row on the south (image-left) straight, canopy roof
-  grandstand: { s: 285, offset: -64, length: 145, depth: 32, note: 'main stand with canopy, faces the home straight' },
-  stewardsTower: { s: 312, offset: -58 },
-  // green parade/paddock oval outside the south-west corner (oblique ref, lower left)
-  paddock: { s: 60, offset: -92, rx: 45, rz: 28 },
-  // white shade canopies west of the stand (overhead ref, left edge)
-  canopies: { sList: [185, 202, 219, 236], offset: -70 },
+  grandstand: { s: 1620, offset: -64, length: 110, depth: 30, note: 'main stand outside the NW-to-apex stretch of the west turn, faces the track' },
+  stewardsTower: { s: 1575, offset: -58 },
+  paddocks: [
+    { s: 1710, offset: -92, rx: 42, rz: 26, note: 'main parade oval, just south of the stand' },
+    { s: 1650, offset: -86, rx: 24, rz: 16, note: 'small warm-up green beside the stand' },
+  ],
+  // few white shade tents just north of the stand
+  canopies: { sList: [1520, 1545, 1570], offset: -80 },
   serviceBuildings: [
-    { s: 18, offset: -100, w: 42, d: 20, h: 8, note: 'SW corner service block' },
-    { s: 350, offset: -86, w: 26, d: 14, h: 6, note: 'east service block near stand' },
+    { s: 1800, offset: -175, w: 55, d: 28, h: 10, note: 'large white SW building (own parking)' },
+    { s: 60, offset: -95, w: 24, d: 12, h: 5, note: 'small shed on the south side' },
   ],
   parking: [
-    { s: 255, offset: -112, w: 115, d: 55 },
-    { s: 340, offset: -104, w: 70, d: 45 },
+    { s: 120, offset: -105, w: 130, d: 50, note: 'south foreground rows' },
+    { s: 1830, offset: -215, w: 80, d: 45, note: 'SW building lot' },
   ],
-  entranceGate: { s: 430, offset: -66 },
-  // long stable barn rows west of the venue (sunset reference, lower left)
-  stables: { x: -560, z: -70, rows: 2, perRow: 6, w: 68, d: 13, gapX: 105, gapZ: 52 },
+  entranceGate: { s: 480, offset: -70, note: 'SE corner gate house (red roof in the photo)' },
+  // barn rows just NORTH-WEST of the venue (photo, upper left)
+  stables: { x: -340, z: -160, rows: 2, perRow: 4, w: 50, d: 11, gapX: 75, gapZ: 30 },
 };
 
 export const VEGETATION_ZONES = [
   // dense tree line along the far (north) side — visible in all references
   { type: 'row', sFrom: 1050, sTo: 1430, offset: -58, spacing: 13 },
-  // partial row rounding the east turn
-  { type: 'row', sFrom: 450, sTo: 900, offset: -60, spacing: 16 },
+  // row rounding the east turn (photo: continues along the east outer edge)
+  { type: 'row', sFrom: 430, sTo: 900, offset: -60, spacing: 16 },
   // north half of the west arc
-  { type: 'row', sFrom: 1440, sTo: 1760, offset: -58, spacing: 14 },
-  // clusters near the buildings (south side is NOT a continuous row)
-  { type: 'cluster', s: 62, offset: -80, radius: 26, count: 12 },
-  { type: 'cluster', s: 290, offset: -84, radius: 22, count: 8 },
-  { type: 'cluster', s: 425, offset: -78, radius: 18, count: 7 },
+  { type: 'row', sFrom: 1440, sTo: 1560, offset: -58, spacing: 14 },
+  // clusters around the west-end facilities (photographic pass)
+  { type: 'cluster', s: 1790, offset: -95, radius: 24, count: 10 },
+  { type: 'cluster', s: 1660, offset: -85, radius: 20, count: 8 },
+  { type: 'cluster', s: 480, offset: -82, radius: 18, count: 7 },
   // sparse palms inside the infield, tied to the garden layout
   {
     type: 'infield', anchors: [
       [-150, -25], [-60, 0], [30, 25], [120, 50], [-40, -75],
-      [80, -35], [-110, 60], [10, 80], [170, 0],
+      [80, -35], [-110, 60], [10, 80], [-200, 20], [60, -70],
     ], perAnchor: 3, radius: 14,
   },
 ];
 
 export const INFIELD = {
-  // walking paths digitized from the reference (long diagonal promenade,
-  // one crossing path, an inner loop, two short connectors)
+  // walking paths — V2.1: east ends trimmed where the dirt arena wedge sits
   paths: [
-    { id: 'promenade', width: 5, points: [[-260, -60], [-140, -12], [0, 18], [150, 58], [252, 96]] },
-    { id: 'cross', width: 3.5, points: [[-160, 118], [-40, 44], [70, -42], [172, -96]] },
-    { id: 'loop', width: 3, ellipse: { cx: -10, cz: 8, rx: 200, rz: 95, samples: 40 } },
-    { id: 'plaza_spur', width: 2.5, points: [[-58, -8], [-56, -42]] },
-    { id: 'circle_spur', width: 2.5, points: [[86, 40], [104, 50]] },
+    { id: 'promenade', width: 5, points: [[-260, -60], [-140, -12], [0, 18], [90, 40], [140, 58]] },
+    { id: 'cross', width: 3.5, points: [[-160, 118], [-40, 44], [70, -42], [150, -90]] },
+    { id: 'loop', width: 3, ellipse: { cx: -30, cz: 8, rx: 185, rz: 90, samples: 40 } },
+    { id: 'plaza_spur', width: 2.5, points: [[130, -35], [172, -47]] },
+    { id: 'circle_spur', width: 2.5, points: [[78, 36], [96, 44]] },
   ],
+  // V2.1 photographic positions (measured in edge-comparison mode against
+  // the final calibrated overlay):
   features: {
-    // pale ring plaza, upper-middle of the infield in the overhead reference
-    plaza: { x: -55, z: -60, r: 20 },
-    // concentric green circle, lower-right quarter
-    greenCircle: { x: 110, z: 55, r: 15 },
-    // small geometric radial feature, lower-left quarter
-    star: { x: -125, z: 68, r: 11 },
+    // large ornamental circle garden, NE quarter of the infield
+    plaza: { x: 195, z: -50, r: 22 },
+    // concentric ringed circle, right-center
+    greenCircle: { x: 103, z: 46, r: 14 },
+    // radial wheel/star pattern, center-west of the infield
+    star: { x: -52, z: -56, r: 13 },
+  },
+  // open dirt arena wedge on the east side of the infield, with a small
+  // structure at its east tip (clearly visible in the photo)
+  arena: {
+    points: [[240, -30], [350, -22], [352, 58], [248, 50]],
+    building: [330, 15],
   },
   // planting beds at fixed anchors along the paths (structure is manual;
   // only the organic outline jitter uses a fixed seed)
   bedAnchors: [
     { x: -180, z: -40, r: 19 }, { x: -120, z: -15, r: 15 }, { x: -70, z: 5, r: 21 },
     { x: -20, z: 15, r: 13 }, { x: 40, z: 30, r: 22 }, { x: 100, z: 45, r: 15 },
-    { x: 160, z: 70, r: 18 }, { x: -90, z: 60, r: 16 }, { x: -30, z: 78, r: 12 },
+    { x: 135, z: 65, r: 14 }, { x: -90, z: 60, r: 16 }, { x: -30, z: 78, r: 12 },
     { x: 60, z: -60, r: 18 }, { x: 0, z: -92, r: 13 }, { x: -140, z: -90, r: 15 },
-    { x: 120, z: -22, r: 19 }, { x: 195, z: 20, r: 13 },
-    { x: -230, z: 20, r: 14 }, { x: 240, z: -40, r: 15 },
+    { x: 120, z: -22, r: 16 }, { x: -230, z: 20, r: 14 },
     { x: 20, z: 60, r: 14 }, { x: -60, z: -110, r: 12 },
+    { x: 185, z: -45, r: 13 }, { x: 250, z: -100, r: 12 },
   ],
 };
 
 export const SERVICE_ACCESS_ROADS = [
   // from the perimeter road out to the parking aprons / entrances
-  { sFrom: 258, length: 70, width: 8 },
-  { sFrom: 432, length: 320, width: 9, note: 'SE entrance road, continues toward the city' },
+  { sFrom: 130, length: 60, width: 8, note: 'south parking access' },
+  { sFrom: 470, length: 320, width: 9, note: 'SE entrance road past the gate house' },
   { sFrom: 1240, length: 220, width: 8, note: 'north access toward the built-up side' },
 ];
 

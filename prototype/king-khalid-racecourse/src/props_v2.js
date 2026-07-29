@@ -8,7 +8,7 @@ import {
   TRACK, BUILDING_ZONES, VEGETATION_ZONES, INFIELD,
   perimeter, offsetPointAt, placementAt, sampleLoop,
 } from './kkrc_reference_definition.js';
-import { buildRibbon, buildBlob } from './geometry_v2.js';
+import { buildRibbon, buildBlob, buildPolygon } from './geometry_v2.js';
 
 function mulberry32(seed) {
   return function () {
@@ -296,20 +296,21 @@ export function buildBuildings(mats) {
   tower.add(tRoof);
   g.add(tower);
 
-  // --- paddock oval (green parade ring outside the SW corner) ---
-  const PD = BUILDING_ZONES.paddock;
-  const pd = orientedGroup(PD);
-  const ring = new THREE.Mesh(new THREE.CircleGeometry(1, 44), mats.paddockGreen);
-  ring.rotation.x = -Math.PI / 2;
-  ring.scale.set(PD.rx, PD.rz, 1);
-  ring.position.y = 0.12;
-  pd.add(ring);
-  const ringPath = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 44), mats.path);
-  ringPath.rotation.x = -Math.PI / 2;
-  ringPath.scale.set(PD.rx, PD.rz, 1);
-  ringPath.position.y = 0.14;
-  pd.add(ringPath);
-  g.add(pd);
+  // --- paddock ovals (green parade rings by the west-end facilities) ---
+  for (const PD of BUILDING_ZONES.paddocks) {
+    const pd = orientedGroup(PD);
+    const ring = new THREE.Mesh(new THREE.CircleGeometry(1, 44), mats.paddockGreen);
+    ring.rotation.x = -Math.PI / 2;
+    ring.scale.set(PD.rx, PD.rz, 1);
+    ring.position.y = 0.12;
+    pd.add(ring);
+    const ringPath = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 44), mats.path);
+    ringPath.rotation.x = -Math.PI / 2;
+    ringPath.scale.set(PD.rx, PD.rz, 1);
+    ringPath.position.y = 0.14;
+    pd.add(ringPath);
+    g.add(pd);
+  }
 
   // --- white shade canopies (pyramid tents) ---
   const canopyGeo = new THREE.ConeGeometry(8, 4.5, 4);
@@ -347,15 +348,19 @@ export function buildBuildings(mats) {
     g.add(grp);
   }
 
-  // --- SE entrance gate ---
+  // --- SE corner gate house (small building with a dark roof in the photo) ---
   const gate = orientedGroup(BUILDING_ZONES.entranceGate);
-  const gL = new THREE.Mesh(new THREE.BoxGeometry(1.4, 7, 1.4), mats.buildingWhite);
-  gL.position.set(-6, 3.5, 0);
-  const gR = gL.clone();
-  gR.position.set(6, 3.5, 0);
-  const gT = new THREE.Mesh(new THREE.BoxGeometry(15, 1.2, 2), mats.buildingBeige);
-  gT.position.y = 7;
-  gate.add(gL, gR, gT);
+  const gh = new THREE.Mesh(new THREE.BoxGeometry(12, 6, 9), mats.buildingWhite);
+  gh.position.y = 3;
+  gh.castShadow = true;
+  const ghRoof = new THREE.Mesh(new THREE.BoxGeometry(13.5, 0.7, 10.5), mats.roofDark);
+  ghRoof.position.y = 6.4;
+  const gL = new THREE.Mesh(new THREE.BoxGeometry(1.2, 6, 1.2), mats.buildingWhite);
+  gL.position.set(-12, 3, 0);
+  const gT = new THREE.Mesh(new THREE.BoxGeometry(12, 1, 1.6), mats.buildingBeige);
+  gT.position.set(-12, 6, 0);
+  gT.rotation.y = Math.PI / 2;
+  gate.add(gh, ghRoof, gL, gT);
   g.add(gate);
 
   // --- stable barn rows west of the venue (sunset reference) ---
@@ -437,6 +442,19 @@ export function buildInfield(mats) {
   shrubs.count = si;
   shrubs.castShadow = true;
   g.add(shrubs);
+
+  // open dirt arena wedge, east infield (photographic pass) + small structure
+  if (INFIELD.arena) {
+    g.add(buildPolygon(INFIELD.arena.points, 0.13, mats.sandTraining));
+    const [bx, bz] = INFIELD.arena.building;
+    const ab = new THREE.Mesh(new THREE.BoxGeometry(16, 5, 10), mats.buildingBeige);
+    ab.position.set(bx, 2.5, bz);
+    ab.castShadow = true;
+    g.add(ab);
+    const abRoof = new THREE.Mesh(new THREE.BoxGeometry(17.5, 0.6, 11.5), mats.roofDark);
+    abRoof.position.set(bx, 5.3, bz);
+    g.add(abRoof);
+  }
 
   // plaza: pale stone ring, sand center — no monument (none in the reference)
   const F = INFIELD.features;
