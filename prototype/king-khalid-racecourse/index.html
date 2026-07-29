@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>King Khalid Racecourse — Scene Prototype</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #101418; }
+  #scene { display: block; width: 100%; height: 100%; }
+  #hud {
+    position: fixed; top: 14px; left: 14px; display: flex; gap: 8px;
+    font-family: system-ui, sans-serif; z-index: 10;
+  }
+  #hud button {
+    padding: 8px 14px; border: 1px solid rgba(255,255,255,.35); border-radius: 8px;
+    background: rgba(20,26,32,.55); color: #eef2f5; font-size: 13px; cursor: pointer;
+    backdrop-filter: blur(4px);
+  }
+  #hud button.active { background: #c9772e; border-color: #c9772e; color: #fff; }
+  #title {
+    position: fixed; bottom: 14px; left: 14px; color: rgba(255,255,255,.75);
+    font: 12px system-ui, sans-serif; z-index: 10;
+  }
+</style>
+<script type="importmap">
+  { "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="hud">
+  <button data-camera="aerial" class="active">1 · Aerial</button>
+  <button data-camera="trackside">2 · Trackside</button>
+  <button data-camera="grandstand">3 · Grandstand</button>
+  <button data-camera="overview">4 · Overview</button>
+</div>
+<div id="title">King Khalid Racecourse — standalone scene prototype (no gameplay wiring)</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

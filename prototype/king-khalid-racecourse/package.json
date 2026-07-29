@@ -1,0 +1,11 @@
+{
+  "name": "kkrc-scene-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone visual prototype of King Khalid Racecourse (no gameplay wiring)",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "export-metadata": "node tools/export_metadata.mjs"
+  }
+}
