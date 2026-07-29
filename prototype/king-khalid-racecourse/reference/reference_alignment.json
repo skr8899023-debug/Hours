@@ -1,0 +1,17 @@
+{
+  "format": "kkrc-reference-alignment",
+  "version": 2,
+  "photo_verified": false,
+  "status": "INITIAL — digitized mapping only. Regenerated automatically by tools/capture_v2_1.mjs once reference/kkrc_aerial_reference.jpg exists and loads in REFERENCE ALIGNMENT MODE.",
+  "image_filename": "kkrc_aerial_reference.jpg (NOT YET IN REPO)",
+  "image_dimensions_px": [0, 0],
+  "opacity": 0.5,
+  "meters_per_image_height": 830,
+  "meters_per_image_width": 623,
+  "scale_multiplier": 1.0,
+  "rotation_deg": 0,
+  "offset_meters": [0, 0],
+  "orientation": "image-top = -X, image-left = +Z",
+  "camera_position": [0, 900, 0.01],
+  "orthographic_bounds": { "left": -500, "right": 500, "top": 281.25, "bottom": -281.25 }
+}

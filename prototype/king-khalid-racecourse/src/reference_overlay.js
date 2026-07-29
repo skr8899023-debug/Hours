@@ -1,18 +1,28 @@
-// REFERENCE ALIGNMENT MODE
-// Top-orthographic view with the aerial reference as a ground overlay:
-//  - opacity / scale / rotation / offset controls (exportable to JSON)
-//  - digitized landmark markers from reference/reference_landmarks.json
-//  - optional 50 m coordinate grid
-// The real photo is loaded from reference/kkrc_aerial_reference.(jpg|png) if
-// present, or via drag & drop. Without it, a schematic redraw generated from
-// the digitized landmark image-space coordinates is used, so alignment can
-// still be judged against the digitization rather than against the model.
+// REFERENCE ALIGNMENT MODE + DIFFERENCE REVIEW (V2.1)
+// Top-orthographic view with the aerial reference photo as a ground overlay.
+//
+//  - loads reference/kkrc_aerial_reference.(jpg|png) or accepts drag & drop
+//  - shows the loaded file name and native resolution in the panel
+//  - opacity / scale / rotation / offset controls, exportable to JSON
+//  - digitized landmark markers + 50 m grid
+//  - track boundary debug lines (centerline, inner/outer, service road,
+//    training track) and the 28 spline control points
+//  - Difference Review presets: reference-only, model-only, overlay 25/50/75,
+//    flicker A/B, edge comparison (boundary lines over the photo)
+//
+// HONESTY GUARD: while no real photo is loaded, the overlay falls back to a
+// schematic drawn from the digitized landmark coordinates, state.isPhoto stays
+// false, and a red "SCHEMATIC" banner is shown — approval captures must check
+// state.isPhoto and refuse to run against the schematic.
 
 import * as THREE from 'three';
+import { sampleLoop, CONTROL_POINTS, TRACK } from './kkrc_reference_definition.js';
 
 const IMG_CANDIDATES = [
   '../reference/kkrc_aerial_reference.jpg',
   '../reference/kkrc_aerial_reference.png',
+  './reference/kkrc_aerial_reference.jpg',
+  './reference/kkrc_aerial_reference.png',
 ];
 
 export async function createReferenceOverlay(scene) {
@@ -23,7 +33,11 @@ export async function createReferenceOverlay(scene) {
     rotationDeg: 0,
     offsetX: 0,
     offsetZ: 0,
-    imageSource: 'schematic (drop the aerial photo onto the page to replace)',
+    isPhoto: false,
+    imageName: 'schematic (no photo loaded)',
+    imageWidth: 0,
+    imageHeight: 0,
+    diffMode: 'off',
   };
 
   let landmarksDoc = null;
@@ -41,8 +55,7 @@ export async function createReferenceOverlay(scene) {
   group.visible = false;
   scene.add(group);
 
-  // --- overlay plane (image plane axes: plane +x = image u -> -Z model,
-  //     plane +y(=world -z after rotX) = image v -> ... handled by mapping) ---
+  // ------------------------------------------------------------------ plane
   const planeGeo = new THREE.PlaneGeometry(1, 1);
   const planeMat = new THREE.MeshBasicMaterial({
     transparent: true, opacity: state.opacity, depthWrite: false, depthTest: false,
@@ -55,16 +68,12 @@ export async function createReferenceOverlay(scene) {
 
   function fitPlane() {
     // documented mapping: image-top -> model -X, image-left -> model +Z.
-    // After rotation.x = -90°, an extra +90° in-plane rotation sends the
-    // image top to -X and the image right edge to -Z.
     plane.scale.set(W * state.scale, H * state.scale, 1);
     plane.rotation.z = Math.PI / 2 + (state.rotationDeg * Math.PI) / 180;
     plane.position.set(state.offsetX, 1.5, state.offsetZ);
   }
 
   function schematicTexture() {
-    // redraw of the digitized reference: track boundary landmarks + features,
-    // drawn purely from image_uv values (independent of the 3D model data)
     const cw = 512, ch = Math.round(512 * (H / W));
     const canvas = document.createElement('canvas');
     canvas.width = cw; canvas.height = ch;
@@ -86,10 +95,25 @@ export async function createReferenceOverlay(scene) {
         ctx.fillRect(px - 8, py - 0.75, 16, 1.5);
         ctx.fillText(lm.id, px + 7, py - 5);
       }
+      ctx.fillStyle = 'rgba(255,80,80,0.9)';
+      ctx.font = 'bold 20px sans-serif';
+      ctx.fillText('SCHEMATIC — NOT A PHOTO', 20, ch - 24);
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
+  }
+
+  function applyTexture(tex, { isPhoto, name }) {
+    tex.flipY = true;
+    planeMat.map = tex;
+    planeMat.needsUpdate = true;
+    state.isPhoto = isPhoto;
+    state.imageName = name;
+    const img = tex.image;
+    state.imageWidth = img?.naturalWidth ?? img?.width ?? 0;
+    state.imageHeight = img?.naturalHeight ?? img?.height ?? 0;
+    updateSourceLabel();
   }
 
   async function tryLoadPhoto() {
@@ -98,26 +122,14 @@ export async function createReferenceOverlay(scene) {
       try {
         const tex = await loader.loadAsync(url);
         tex.colorSpace = THREE.SRGBColorSpace;
-        state.imageSource = url.replace('../', '');
-        return tex;
+        applyTexture(tex, { isPhoto: true, name: url.split('/').pop() });
+        return true;
       } catch { /* keep trying */ }
     }
-    return null;
+    return false;
   }
 
-  // texture orientation: canvas/photo v runs top->bottom, plane local +y runs
-  // bottom->top — flip Y so image-top lands at plane local +y (= model -X
-  // after the -90° yaw), matching the documented mapping.
-  function applyTexture(tex) {
-    tex.flipY = true;
-    planeMat.map = tex;
-    planeMat.needsUpdate = true;
-  }
-
-  const photo = await tryLoadPhoto();
-  applyTexture(photo || schematicTexture());
-
-  // --- landmark markers in model space (green rings, always in meters) ---
+  // ------------------------------------------------- landmark rings + grid
   const markers = new THREE.Group();
   markers.renderOrder = 901;
   if (landmarksDoc) {
@@ -135,7 +147,6 @@ export async function createReferenceOverlay(scene) {
   }
   group.add(markers);
 
-  // --- 50 m grid ---
   const grid = new THREE.GridHelper(2000, 40, 0x224466, 0x224466);
   grid.material.transparent = true;
   grid.material.opacity = 0.35;
@@ -143,26 +154,80 @@ export async function createReferenceOverlay(scene) {
   grid.visible = false;
   group.add(grid);
 
-  // --- HTML control panel ---
+  // --------------------------- track boundary debug lines + control points
+  const lines = new THREE.Group();
+  lines.name = 'boundary_debug_lines';
+  lines.visible = false;
+  function loopLine(o, color, y = 2.6) {
+    const pts = sampleLoop(o, 512).map((p) => new THREE.Vector3(p.x, y, p.z));
+    const geo = new THREE.BufferGeometry().setFromPoints(pts);
+    const mat = new THREE.LineBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.95 });
+    const line = new THREE.LineLoop(geo, mat);
+    line.renderOrder = 950;
+    return line;
+  }
+  lines.add(loopLine(0, 0xffe14d));                                    // centerline — yellow
+  lines.add(loopLine(TRACK.mainTrack.innerEdgeOffset, 0x39d0ff));      // main inner — cyan
+  lines.add(loopLine(TRACK.mainTrack.outerEdgeOffset, 0xff4fd8));      // main outer — magenta
+  lines.add(loopLine(TRACK.trainingTrack.innerEdgeOffset, 0x9dff4f));  // training — green
+  lines.add(loopLine(TRACK.trainingTrack.outerEdgeOffset, 0x9dff4f));
+  lines.add(loopLine(TRACK.serviceRoad.innerEdgeOffset, 0xffffff));    // service road — white
+  lines.add(loopLine(TRACK.serviceRoad.outerEdgeOffset, 0xffffff));
+  {
+    const cpGeo = new THREE.OctahedronGeometry(4);
+    const cpMat = new THREE.MeshBasicMaterial({ color: 0xff9a2e, depthTest: false });
+    const cps = new THREE.InstancedMesh(cpGeo, cpMat, CONTROL_POINTS.length);
+    const m = new THREE.Matrix4();
+    CONTROL_POINTS.forEach(([x, z], i) => {
+      m.makeTranslation(x, 3, z);
+      cps.setMatrixAt(i, m);
+    });
+    cps.renderOrder = 951;
+    lines.add(cps);
+  }
+  group.add(lines);
+
+  // -------------------------------------------------------- HTML panel
   const panel = document.createElement('div');
   panel.id = 'refPanel';
   panel.innerHTML = `
     <strong>REFERENCE ALIGNMENT MODE</strong>
+    <small id="refSrc"></small>
+    <div id="refWarn">SCHEMATIC FALLBACK — approval captures blocked until
+      reference/kkrc_aerial_reference.jpg is provided (or drop the photo here)</div>
     <label>Opacity <input type="range" id="refOp" min="0" max="1" step="0.05" value="0.5"></label>
     <label>Scale <input type="range" id="refSc" min="0.5" max="1.5" step="0.005" value="1"></label>
-    <label>Rotate° <input type="range" id="refRot" min="-15" max="15" step="0.25" value="0"></label>
+    <label>Rotate&deg; <input type="range" id="refRot" min="-15" max="15" step="0.25" value="0"></label>
     <label>Offset X <input type="range" id="refOX" min="-150" max="150" step="1" value="0"></label>
     <label>Offset Z <input type="range" id="refOZ" min="-150" max="150" step="1" value="0"></label>
     <div class="refBtns">
-      <button id="refImgToggle">image on/off</button>
+      <button id="refImgToggle">image</button>
       <button id="refGrid">grid</button>
       <button id="refMarks">landmarks</button>
+      <button id="refLines">boundaries</button>
       <button id="refExport">export JSON</button>
     </div>
-    <small id="refSrc"></small>`;
+    <strong style="margin-top:4px">DIFFERENCE REVIEW</strong>
+    <div class="refBtns" id="diffBtns">
+      <button data-diff="reference">ref only</button>
+      <button data-diff="model">model only</button>
+      <button data-diff="overlay25">25%</button>
+      <button data-diff="overlay50">50%</button>
+      <button data-diff="overlay75">75%</button>
+      <button data-diff="flicker">flicker</button>
+      <button data-diff="edge">edges</button>
+      <button data-diff="off">off</button>
+    </div>`;
   panel.style.display = 'none';
   document.body.appendChild(panel);
-  panel.querySelector('#refSrc').textContent = `source: ${state.imageSource}`;
+
+  function updateSourceLabel() {
+    const el = panel.querySelector('#refSrc');
+    el.textContent = state.isPhoto
+      ? `photo: ${state.imageName} — ${state.imageWidth}×${state.imageHeight}px`
+      : `source: ${state.imageName}`;
+    panel.querySelector('#refWarn').style.display = state.isPhoto ? 'none' : 'block';
+  }
 
   const bind = (id, fn) => panel.querySelector(id).addEventListener('input', fn);
   bind('#refOp', (e) => { state.opacity = +e.target.value; planeMat.opacity = state.opacity; });
@@ -173,22 +238,93 @@ export async function createReferenceOverlay(scene) {
   panel.querySelector('#refImgToggle').addEventListener('click', () => { plane.visible = !plane.visible; });
   panel.querySelector('#refGrid').addEventListener('click', () => { grid.visible = !grid.visible; });
   panel.querySelector('#refMarks').addEventListener('click', () => { markers.visible = !markers.visible; });
+  panel.querySelector('#refLines').addEventListener('click', () => { lines.visible = !lines.visible; });
   panel.querySelector('#refExport').addEventListener('click', () => {
-    const out = {
-      format: 'kkrc-reference-alignment',
-      image: state.imageSource,
-      meters_per_image_height: H * state.scale,
-      meters_per_image_width: W * state.scale,
-      rotation_deg: state.rotationDeg,
-      offset_meters: [state.offsetX, state.offsetZ],
-      opacity: state.opacity,
-    };
-    const blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(exportAlignment(), null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'reference_alignment.json';
     a.click();
   });
+  panel.querySelectorAll('#diffBtns button').forEach((b) =>
+    b.addEventListener('click', () => setDiffMode(b.dataset.diff)));
+
+  function exportAlignment(camera) {
+    const out = {
+      format: 'kkrc-reference-alignment',
+      version: 2,
+      photo_verified: state.isPhoto,
+      image_filename: state.imageName,
+      image_dimensions_px: [state.imageWidth, state.imageHeight],
+      opacity: state.opacity,
+      meters_per_image_height: H * state.scale,
+      meters_per_image_width: W * state.scale,
+      scale_multiplier: state.scale,
+      rotation_deg: state.rotationDeg,
+      offset_meters: [state.offsetX, state.offsetZ],
+      orientation: 'image-top = -X, image-left = +Z',
+    };
+    if (camera) {
+      out.camera_position = camera.position.toArray();
+      if (camera.isOrthographicCamera) {
+        out.orthographic_bounds = {
+          left: camera.left, right: camera.right, top: camera.top, bottom: camera.bottom,
+        };
+      }
+    }
+    return out;
+  }
+
+  // ----------------------------------------------------- difference review
+  // scene meshes we hide for "reference only" / "edge" modes
+  function setModelVisible(on) {
+    for (const child of scene.children) {
+      if (child === group || child.isLight || child === scene.getObjectByName('sky_dome')) continue;
+      if (child.name === 'sky_dome') continue;
+      child.visible = on;
+    }
+  }
+
+  let flickerTimer = null;
+  function stopFlicker() {
+    if (flickerTimer) { clearInterval(flickerTimer); flickerTimer = null; }
+  }
+
+  function setDiffMode(mode) {
+    stopFlicker();
+    state.diffMode = mode;
+    setModelVisible(true);
+    plane.visible = true;
+    lines.visible = false;
+    switch (mode) {
+      case 'reference':
+        planeMat.opacity = 1;
+        setModelVisible(false);
+        break;
+      case 'model':
+        plane.visible = false;
+        break;
+      case 'overlay25': planeMat.opacity = 0.25; break;
+      case 'overlay50': planeMat.opacity = 0.50; break;
+      case 'overlay75': planeMat.opacity = 0.75; break;
+      case 'flicker':
+        planeMat.opacity = 0.9;
+        flickerTimer = setInterval(() => { plane.visible = !plane.visible; }, 500);
+        break;
+      case 'flicker-a': planeMat.opacity = 0.9; plane.visible = true; break;   // deterministic captures
+      case 'flicker-b': plane.visible = false; break;
+      case 'edge':
+        planeMat.opacity = 1;
+        setModelVisible(false);
+        lines.visible = true;
+        break;
+      default:
+        planeMat.opacity = state.opacity;
+        break;
+    }
+    panel.querySelectorAll('#diffBtns button').forEach((b) =>
+      b.classList.toggle('active', b.dataset.diff === mode));
+  }
 
   // drag & drop the real aerial photo
   window.addEventListener('dragover', (e) => e.preventDefault());
@@ -198,26 +334,31 @@ export async function createReferenceOverlay(scene) {
     if (!file || !file.type.startsWith('image/')) return;
     const tex = new THREE.TextureLoader().load(URL.createObjectURL(file), () => {
       tex.colorSpace = THREE.SRGBColorSpace;
-      applyTexture(tex);
-      state.imageSource = `dropped: ${file.name}`;
-      panel.querySelector('#refSrc').textContent = `source: ${state.imageSource}`;
+      applyTexture(tex, { isPhoto: true, name: `dropped: ${file.name}` });
     });
   });
 
+  const gotPhoto = await tryLoadPhoto();
+  if (!gotPhoto) applyTexture(schematicTexture(), { isPhoto: false, name: 'schematic (no photo loaded)' });
   fitPlane();
+  updateSourceLabel();
 
   return {
     group,
     state,
+    exportAlignment,
+    setDiffMode,
     setEnabled(on) {
       state.enabled = on;
       group.visible = on;
       panel.style.display = on ? 'flex' : 'none';
+      if (!on) { setDiffMode('off'); setModelVisible(true); }
     },
     setOpacity(v) {
       state.opacity = v;
       planeMat.opacity = v;
       panel.querySelector('#refOp').value = String(v);
     },
+    setBoundaries(on) { lines.visible = on; },
   };
 }

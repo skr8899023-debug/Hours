@@ -107,6 +107,10 @@ window.KKRC = {
     toggleReferenceMode(on);
     if (opacity !== undefined) overlay.setOpacity(opacity);
   },
+  setDiffMode: (mode) => overlay.setDiffMode(mode),
+  setBoundaries: (on) => overlay.setBoundaries(on),
+  overlayState: () => ({ ...overlay.state }),
+  exportAlignment: () => overlay.exportAlignment(rig.activeCamera()),
   renderOnce: () => renderer.render(scene, rig.activeCamera()),
   stats: () => ({
     drawCalls: renderer.info.render.calls,
