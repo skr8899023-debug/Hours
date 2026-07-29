@@ -21,6 +21,21 @@
     position: fixed; bottom: 14px; left: 14px; color: rgba(255,255,255,.75);
     font: 12px system-ui, sans-serif; z-index: 10;
   }
+  #refPanel {
+    position: fixed; top: 60px; left: 14px; z-index: 20; display: none;
+    flex-direction: column; gap: 6px; width: 240px; padding: 12px;
+    background: rgba(16,22,28,.82); border: 1px solid rgba(255,255,255,.25);
+    border-radius: 10px; color: #e8eef3; font: 12px system-ui, sans-serif;
+    backdrop-filter: blur(5px);
+  }
+  #refPanel label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  #refPanel input[type="range"] { width: 140px; }
+  #refPanel .refBtns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  #refPanel button {
+    padding: 4px 8px; font-size: 11px; border-radius: 6px; cursor: pointer;
+    background: rgba(255,255,255,.12); color: #eef2f5; border: 1px solid rgba(255,255,255,.3);
+  }
+  #refPanel small { opacity: .7 }
 </style>
 <script type="importmap">
   { "imports": { "three": "./vendor/three.module.min.js" } }
@@ -29,10 +44,14 @@
 <body>
 <canvas id="scene"></canvas>
 <div id="hud">
-  <button data-camera="aerial" class="active">1 · Aerial</button>
-  <button data-camera="trackside">2 · Trackside</button>
-  <button data-camera="grandstand">3 · Grandstand</button>
-  <button data-camera="overview">4 · Overview</button>
+  <button data-camera="referenceMatch" class="active">1 · RefMatch</button>
+  <button data-camera="topOrthographic">2 · TopOrtho</button>
+  <button data-camera="aerialHero">3 · AerialHero</button>
+  <button data-camera="trackside">4 · Trackside</button>
+  <button data-camera="grandstand">5 · Grandstand</button>
+  <button data-camera="integrationOverview">6 · Overview</button>
+  <button id="refBtn" title="REFERENCE ALIGNMENT MODE (R)">REF</button>
+  <button id="variantBtn"></button>
 </div>
 <div id="title">King Khalid Racecourse — standalone scene prototype (no gameplay wiring)</div>
 <script type="module" src="./src/main.js"></script>

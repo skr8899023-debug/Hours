@@ -1,0 +1,39 @@
+{
+  "format": "kkrc-reference-landmarks",
+  "version": 1,
+  "description": "Landmark points digitized visually from the attached aerial reference imagery of King Khalid Racecourse. model_xz is in scene meters (right-handed, Y-up, XZ ground). image_uv is normalized [0..1] against the overhead reference (u = left->right, v = top->bottom). Dimensions are visually inferred, NOT survey data.",
+  "image_mapping": {
+    "primary_image": "overhead aerial reference (portrait). Drop a copy at reference/kkrc_aerial_reference.jpg to use it as a live overlay.",
+    "meters_per_image_height": 830,
+    "meters_per_image_width": 623,
+    "model_from_image": "model_x = (v - 0.5) * 830 ; model_z = (0.5 - u) * 623",
+    "orientation": "image-up = -X (back straight side), image-left = +Z (grandstand side)"
+  },
+  "landmarks": [
+    { "id": "home_straight_west_end", "model_xz": [-205.2, 164.3], "image_uv": [0.236, 0.253], "in_frame": true, "note": "west end of the south (home) straight" },
+    { "id": "home_straight_east_end", "model_xz": [171.6, 199.2], "image_uv": [0.180, 0.707], "in_frame": true, "note": "east end of the home straight, entering the wider east turn" },
+    { "id": "back_straight_west_end", "model_xz": [-215.6, -163.0], "image_uv": [0.762, 0.240], "in_frame": true },
+    { "id": "back_straight_east_end", "model_xz": [171.6, -199.2], "image_uv": [0.820, 0.707], "in_frame": true },
+    { "id": "west_turn_center", "model_xz": [-190.0, 0.0], "image_uv": [0.500, 0.271], "in_frame": true, "note": "tighter turn, r ~165 m at centerline" },
+    { "id": "east_turn_center", "model_xz": [190.0, 0.0], "image_uv": [0.500, 0.729], "in_frame": true, "note": "wider turn, r ~200 m at centerline" },
+    { "id": "track_outer_west_apex", "model_xz": [-367.0, 0.0], "image_uv": [0.500, 0.058], "in_frame": true },
+    { "id": "track_outer_east_apex", "model_xz": [400.0, 0.0], "image_uv": [0.500, 0.982], "in_frame": true },
+    { "id": "finish_line_mid", "model_xz": [93.5, 191.9], "image_uv": [0.192, 0.613], "in_frame": true, "note": "in front of the main stand" },
+    { "id": "start_line_mid", "model_xz": [3.9, 183.6], "image_uv": [0.205, 0.505], "in_frame": true },
+    { "id": "track_inner_boundary_at_finish", "model_xz": [94.6, 180.0], "image_uv": [0.211, 0.614], "in_frame": true },
+    { "id": "track_outer_boundary_at_finish", "model_xz": [92.4, 203.9], "image_uv": [0.173, 0.611], "in_frame": true },
+    { "id": "grandstand_center", "model_xz": [72.7, 254.2], "image_uv": [0.092, 0.588], "in_frame": true, "note": "long stand row on the image-left straight" },
+    { "id": "stewards_tower", "model_xz": [100.2, 250.8], "image_uv": [0.097, 0.621], "in_frame": true },
+    { "id": "paddock_oval", "model_xz": [-154.0, 261.4], "image_uv": [0.080, 0.314], "in_frame": true, "note": "green parade oval outside the SW corner (oblique reference, lower left)" },
+    { "id": "parking_main", "model_xz": [38.4, 299.3], "image_uv": [0.020, 0.546], "in_frame": true },
+    { "id": "service_block_sw", "model_xz": [-196.5, 265.6], "image_uv": [0.074, 0.263], "in_frame": true },
+    { "id": "entrance_gate_se", "model_xz": [233.9, 262.3], "image_uv": [0.079, 0.782], "in_frame": true },
+    { "id": "chute_start", "model_xz": [271.0, 211.0], "image_uv": [0.161, 0.827], "in_frame": true, "note": "diagonal training extension, lower right of the oblique reference" },
+    { "id": "infield_plaza_ring", "model_xz": [-55.0, -60.0], "image_uv": [0.596, 0.434], "in_frame": true, "note": "pale circular ring, upper-middle infield" },
+    { "id": "infield_green_circle", "model_xz": [110.0, 55.0], "image_uv": [0.412, 0.633], "in_frame": true, "note": "concentric green circle, lower-right infield" },
+    { "id": "infield_star_feature", "model_xz": [-125.0, 68.0], "image_uv": [0.391, 0.349], "in_frame": true },
+    { "id": "infield_path_intersection", "model_xz": [15.0, 15.0], "image_uv": [0.476, 0.518], "in_frame": true, "note": "promenade x cross-path intersection near center" },
+    { "id": "palm_row_north_mid", "model_xz": [-28.9, -238.9], "image_uv": [0.883, 0.465], "in_frame": true, "note": "dense tree line along the far (back straight) side" },
+    { "id": "stables_rows_west", "model_xz": [-560.0, -70.0], "image_uv": [0.5, -0.17], "in_frame": false, "note": "long barn rows west of the venue — visible in the sunset reference, outside the overhead crop" }
+  ]
+}

@@ -29,14 +29,16 @@ function skyDome() {
   return dome;
 }
 
-export function setupEnvironment(scene) {
-  scene.fog = new THREE.Fog(0xded2b6, 1400, 5200);
+export function setupEnvironment(scene, opts = {}) {
+  const fogColor = opts.fogColor ?? 0xded2b6;
+  scene.fog = new THREE.Fog(fogColor, opts.fogNear ?? 1400, opts.fogFar ?? 5200);
   scene.add(skyDome());
 
-  const hemi = new THREE.HemisphereLight(0xbcd3e8, 0xcbb083, 0.9);
+  const hemi = new THREE.HemisphereLight(
+    opts.hemiSky ?? 0xbcd3e8, opts.hemiGround ?? 0xcbb083, opts.hemiIntensity ?? 0.9);
   scene.add(hemi);
 
-  const sun = new THREE.DirectionalLight(0xfff2df, 2.4);
+  const sun = new THREE.DirectionalLight(opts.sunColor ?? 0xfff2df, opts.sunIntensity ?? 2.4);
   sun.position.set(-500, 700, -350);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
